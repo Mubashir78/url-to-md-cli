@@ -7,6 +7,8 @@
 #     "requests",
 #     "pandas",
 #     "docling",
+#     "litellm",
+#     "youtube-transcript-api",
 # ]
 # ///
 
@@ -27,13 +29,18 @@ from rich.console import Console
 from kb_for_prompt.molecules.url_converter import convert_url_to_markdown
 from kb_for_prompt.molecules.doc_converter import convert_doc_to_markdown
 from kb_for_prompt.molecules.pdf_converter import convert_pdf_to_markdown
+from kb_for_prompt.molecules.youtube_converter import YouTubeConverter, convert_youtube_to_markdown
+
+# Import LLM client for YouTube converter
+from kb_for_prompt.organisms.llm_client import LiteLlmClient, SimpleLlmClient
 
 # Import utilities
 from kb_for_prompt.atoms.type_detector import (
     detect_input_type,
     detect_file_type,
     is_url,
-    is_file_path
+    is_file_path,
+    is_youtube_url
 )
 from kb_for_prompt.atoms.path_utils import (
     generate_output_filename,
@@ -83,6 +90,13 @@ class SingleItemConverter:
         """
         self.console = console or Console()
         self.max_retries = 3
+        
+        # Initialize LLM client for YouTube converter
+        # Try LiteLLM first, fall back to simple client
+        try:
+            self.llm_client = LiteLlmClient()
+        except:
+            self.llm_client = SimpleLlmClient()
     
     def run(
         self,
@@ -275,18 +289,33 @@ class SingleItemConverter:
         )
         
         if input_type == "url":
-            # Extract domain and path for URL
-            from urllib.parse import urlparse
-            parsed = urlparse(input_path)
-            domain = parsed.netloc.replace('.', '_')
-            path = parsed.path.replace('/', '_')
-            
-            # Create a clean filename
-            filename = f"{domain}{path}".rstrip('_')
-            
-            # Remove common extensions
-            if filename.endswith(('.html', '.htm', '.php')):
-                filename = filename.rsplit('.', 1)[0]
+            # Check if it's a YouTube URL
+            is_youtube, video_id = is_youtube_url(input_path)
+            if is_youtube:
+                # For YouTube URLs, try to get the video title
+                try:
+                    youtube_converter = YouTubeConverter(self.llm_client)
+                    metadata = youtube_converter.extract_video_metadata(video_id)
+                    filename = youtube_converter.sanitize_filename(metadata.get('title', f'YouTube Video {video_id}'))
+                    # Remove .md extension as it will be added later
+                    if filename.endswith('.md'):
+                        filename = filename[:-3]
+                except:
+                    # Fallback to video ID if metadata extraction fails
+                    filename = f"youtube_{video_id}"
+            else:
+                # Extract domain and path for regular URLs
+                from urllib.parse import urlparse
+                parsed = urlparse(input_path)
+                domain = parsed.netloc.replace('.', '_')
+                path = parsed.path.replace('/', '_')
+                
+                # Create a clean filename
+                filename = f"{domain}{path}".rstrip('_')
+                
+                # Remove common extensions
+                if filename.endswith(('.html', '.htm', '.php')):
+                    filename = filename.rsplit('.', 1)[0]
         else:
             # Use the file name without its extension
             path_obj = Path(input_path)
@@ -345,7 +374,15 @@ class SingleItemConverter:
                 ) as spinner:
                     # Choose the appropriate converter based on input type
                     if input_type == "url":
-                        markdown_content, _ = convert_url_to_markdown(input_path)
+                        # Check if it's a YouTube URL
+                        is_youtube, video_id = is_youtube_url(input_path)
+                        if is_youtube:
+                            # Use YouTube converter
+                            youtube_converter = YouTubeConverter(self.llm_client)
+                            markdown_content = youtube_converter.convert_to_markdown(video_id, input_path)
+                        else:
+                            # Use regular URL converter
+                            markdown_content, _ = convert_url_to_markdown(input_path)
                     elif input_type in ["doc", "docx"]:
                         markdown_content, _ = convert_doc_to_markdown(input_path)
                     elif input_type == "pdf":

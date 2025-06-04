@@ -9,6 +9,7 @@
 #     "docling",
 #     "pytest",
 #     "litellm",
+#     "youtube-transcript-api",
 # ]
 # ///
 
