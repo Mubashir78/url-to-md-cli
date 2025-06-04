@@ -13,6 +13,7 @@ and PDF files, transforming them into Markdown format.
 from kb_for_prompt.molecules.url_converter import convert_url_to_markdown
 from kb_for_prompt.molecules.doc_converter import convert_doc_to_markdown
 from kb_for_prompt.molecules.pdf_converter import convert_pdf_to_markdown
+from kb_for_prompt.molecules.youtube_converter import convert_youtube_to_markdown
 
 # Export public functions
-__all__ = ['convert_url_to_markdown', 'convert_doc_to_markdown', 'convert_pdf_to_markdown']
+__all__ = ['convert_url_to_markdown', 'convert_doc_to_markdown', 'convert_pdf_to_markdown', 'convert_youtube_to_markdown']
