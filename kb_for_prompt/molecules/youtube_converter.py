@@ -98,18 +98,35 @@ class YouTubeConverter:
             # Try to get manual transcript first
             transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
             
-            try:
-                # Prefer manually created transcripts
-                transcript = transcript_list.find_manually_created_transcript()
-            except NoTranscriptFound:
-                # Fall back to auto-generated
-                transcript = transcript_list.find_generated_transcript()
+            # Try to find the best transcript
+            transcript = None
+            
+            # First, try to find a manually created transcript
+            for t in transcript_list:
+                if not t.is_generated:
+                    transcript = t
+                    break
+            
+            # If no manual transcript found, use the first available one
+            if transcript is None:
+                # Get the first transcript (manual or auto-generated)
+                for t in transcript_list:
+                    transcript = t
+                    break
+            
+            if transcript is None:
+                raise NoTranscriptFound("No transcripts available for this video")
             
             # Fetch the actual transcript data
             transcript_data = transcript.fetch()
             
             # Combine all text segments
-            full_text = ' '.join([item['text'] for item in transcript_data])
+            # Handle different possible data structures
+            if isinstance(transcript_data, list):
+                full_text = ' '.join([item['text'] for item in transcript_data])
+            else:
+                # If it's not a list, try to extract text directly
+                full_text = str(transcript_data)
             return full_text
             
         except TranscriptsDisabled:
