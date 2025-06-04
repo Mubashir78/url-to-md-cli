@@ -7,6 +7,8 @@
 #     "requests",
 #     "pandas",
 #     "docling",
+#     "litellm",
+#     "youtube-transcript-api",
 # ]
 # ///
 
@@ -32,13 +34,18 @@ from rich.console import Console
 from kb_for_prompt.molecules.url_converter import convert_url_to_markdown
 from kb_for_prompt.molecules.doc_converter import convert_doc_to_markdown
 from kb_for_prompt.molecules.pdf_converter import convert_pdf_to_markdown
+from kb_for_prompt.molecules.youtube_converter import YouTubeConverter, convert_youtube_to_markdown
+
+# Import LLM client for YouTube converter
+from kb_for_prompt.organisms.llm_client import LiteLlmClient, SimpleLlmClient
 
 # Import utilities
 from kb_for_prompt.atoms.type_detector import (
     detect_input_type,
     detect_file_type,
     is_url,
-    is_file_path
+    is_file_path,
+    is_youtube_url
 )
 from kb_for_prompt.atoms.path_utils import (
     generate_output_filename,
@@ -91,6 +98,13 @@ class BatchConverter:
         self.console = console or Console()
         self.max_workers = max_workers
         self.max_retries = 3  # Maximum number of retries for conversion
+        
+        # Initialize LLM client for YouTube converter
+        # Try LiteLLM first, fall back to simple client
+        try:
+            self.llm_client = LiteLlmClient()
+        except:
+            self.llm_client = SimpleLlmClient()
     
     def run(
         self,
@@ -346,6 +360,11 @@ class BatchConverter:
                                 input_value=input_str,
                                 validation_type="file_type"
                             )
+                    elif input_type == "url":
+                        # Check if it's a YouTube URL
+                        is_yt, video_id = is_youtube_url(validated_input)
+                        if is_yt:
+                            input_type = "youtube"
                     
                     valid_inputs.append({
                         "original": input_str,
@@ -491,6 +510,15 @@ class BatchConverter:
                     validated_input,
                     max_retries=self.max_retries
                 )
+            elif input_type == "youtube":
+                # Extract video ID from YouTube URL
+                is_yt, video_id = is_youtube_url(validated_input)
+                if is_yt and video_id:
+                    # Use YouTube converter with LLM client
+                    youtube_converter = YouTubeConverter(self.llm_client)
+                    markdown_content = youtube_converter.convert_to_markdown(video_id, validated_input)
+                else:
+                    raise ValueError(f"Invalid YouTube URL: {validated_input}")
             elif input_type in ["doc", "docx"]:
                 markdown_content, _ = convert_doc_to_markdown(
                     validated_input,
@@ -537,17 +565,34 @@ class BatchConverter:
             inputs: List of input strings
         """
         url_count = 0
+        youtube_count = 0
         file_count = 0
         
-        # Count URLs and files
+        # Count URLs, YouTube videos, and files
         for input_str in inputs:
             if is_url(input_str):
-                url_count += 1
+                # Check if it's a YouTube URL
+                is_yt, _ = is_youtube_url(input_str)
+                if is_yt:
+                    youtube_count += 1
+                else:
+                    url_count += 1
             else:
                 file_count += 1
         
+        # Build summary message
+        parts = []
+        if url_count > 0:
+            parts.append(f"{url_count} URLs")
+        if youtube_count > 0:
+            parts.append(f"{youtube_count} YouTube videos")
+        if file_count > 0:
+            parts.append(f"{file_count} files")
+        
+        summary = f"Loaded {len(inputs)} inputs: {', '.join(parts)}"
+        
         display_processing_update(
-            f"Loaded {len(inputs)} inputs: {url_count} URLs and {file_count} files",
+            summary,
             status="info",
             console=self.console
         )
