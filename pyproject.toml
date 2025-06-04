@@ -23,6 +23,7 @@ dependencies = [
     "requests",
     "pandas",
     "docling",
+    "youtube-transcript-api>=0.6.0",
 ]
 
 [project.optional-dependencies]
