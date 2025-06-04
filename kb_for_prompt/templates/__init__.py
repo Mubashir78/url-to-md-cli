@@ -45,6 +45,7 @@ from .prompts import (
     prompt_retry_generation,
 )
 from .summary import display_conversion_summary, display_dataframe_summary
+from .youtube_prompt import YOUTUBE_TRANSCRIPT_PROMPT
 
 __all__ = [
     # banner.py
@@ -75,4 +76,6 @@ __all__ = [
     "display_error",
     "display_validation_error",
     "display_exception",
+    # youtube_prompt.py
+    "YOUTUBE_TRANSCRIPT_PROMPT",
 ]
