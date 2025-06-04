@@ -12,7 +12,8 @@ from kb_for_prompt.atoms.type_detector import (
     get_supported_extensions,
     is_url,
     is_file_path,
-    is_supported_file_type
+    is_supported_file_type,
+    is_youtube_url
 )
 
 
@@ -163,3 +164,119 @@ class TestIsSupportedFileTypeFunction:
         assert is_supported_file_type("document.DOC")
         assert is_supported_file_type("document.DocX")
         assert is_supported_file_type("document.PDF")
+
+
+class TestIsYoutubeUrlFunction:
+    """Tests for is_youtube_url function."""
+    
+    def test_youtube_watch_url(self):
+        """Test various youtube.com/watch?v= URL formats."""
+        test_cases = [
+            ("https://www.youtube.com/watch?v=dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+            ("http://www.youtube.com/watch?v=dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+            ("https://youtube.com/watch?v=dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+            ("http://youtube.com/watch?v=dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+            ("www.youtube.com/watch?v=dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+            ("youtube.com/watch?v=dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+        ]
+        
+        for url, expected_is_youtube, expected_id in test_cases:
+            is_yt, video_id = is_youtube_url(url)
+            assert is_yt == expected_is_youtube, f"Failed for URL: {url}"
+            assert video_id == expected_id, f"Failed to extract ID from URL: {url}"
+    
+    def test_youtube_mobile_url(self):
+        """Test m.youtube.com URL formats."""
+        test_cases = [
+            ("https://m.youtube.com/watch?v=dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+            ("http://m.youtube.com/watch?v=dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+            ("m.youtube.com/watch?v=dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+        ]
+        
+        for url, expected_is_youtube, expected_id in test_cases:
+            is_yt, video_id = is_youtube_url(url)
+            assert is_yt == expected_is_youtube, f"Failed for URL: {url}"
+            assert video_id == expected_id, f"Failed to extract ID from URL: {url}"
+    
+    def test_youtu_be_url(self):
+        """Test youtu.be shortened URL formats."""
+        test_cases = [
+            ("https://youtu.be/dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+            ("http://youtu.be/dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+            ("youtu.be/dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+        ]
+        
+        for url, expected_is_youtube, expected_id in test_cases:
+            is_yt, video_id = is_youtube_url(url)
+            assert is_yt == expected_is_youtube, f"Failed for URL: {url}"
+            assert video_id == expected_id, f"Failed to extract ID from URL: {url}"
+    
+    def test_youtube_embed_url(self):
+        """Test youtube.com/embed/ URL formats."""
+        test_cases = [
+            ("https://www.youtube.com/embed/dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+            ("http://www.youtube.com/embed/dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+            ("https://youtube.com/embed/dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+            ("youtube.com/embed/dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+        ]
+        
+        for url, expected_is_youtube, expected_id in test_cases:
+            is_yt, video_id = is_youtube_url(url)
+            assert is_yt == expected_is_youtube, f"Failed for URL: {url}"
+            assert video_id == expected_id, f"Failed to extract ID from URL: {url}"
+    
+    def test_youtube_v_url(self):
+        """Test youtube.com/v/ URL formats."""
+        test_cases = [
+            ("https://www.youtube.com/v/dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+            ("http://www.youtube.com/v/dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+            ("https://youtube.com/v/dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+            ("youtube.com/v/dQw4w9WgXcQ", True, "dQw4w9WgXcQ"),
+        ]
+        
+        for url, expected_is_youtube, expected_id in test_cases:
+            is_yt, video_id = is_youtube_url(url)
+            assert is_yt == expected_is_youtube, f"Failed for URL: {url}"
+            assert video_id == expected_id, f"Failed to extract ID from URL: {url}"
+    
+    def test_youtube_url_with_additional_parameters(self):
+        """Test YouTube URLs with additional query parameters."""
+        test_cases = [
+            ("https://www.youtube.com/watch?v=dQw4w9WgXcQ&feature=youtu.be", True, "dQw4w9WgXcQ"),
+            ("https://youtube.com/watch?v=dQw4w9WgXcQ&t=30s", True, "dQw4w9WgXcQ"),
+            ("https://youtu.be/dQw4w9WgXcQ?t=1m30s", True, "dQw4w9WgXcQ"),
+        ]
+        
+        for url, expected_is_youtube, expected_id in test_cases:
+            is_yt, video_id = is_youtube_url(url)
+            assert is_yt == expected_is_youtube, f"Failed for URL: {url}"
+            assert video_id == expected_id, f"Failed to extract ID from URL: {url}"
+    
+    def test_non_youtube_urls(self):
+        """Test non-YouTube URLs return False."""
+        test_cases = [
+            ("https://example.com", False, None),
+            ("https://vimeo.com/123456789", False, None),
+            ("https://www.dailymotion.com/video/x12345", False, None),
+            ("not_a_url", False, None),
+            ("/path/to/file.mp4", False, None),
+        ]
+        
+        for url, expected_is_youtube, expected_id in test_cases:
+            is_yt, video_id = is_youtube_url(url)
+            assert is_yt == expected_is_youtube, f"Failed for URL: {url}"
+            assert video_id == expected_id, f"Failed for URL: {url}"
+    
+    def test_youtube_url_with_different_video_ids(self):
+        """Test YouTube URLs with various valid video ID formats."""
+        test_cases = [
+            ("https://www.youtube.com/watch?v=Y5elLLjcmLU", True, "Y5elLLjcmLU"),  # Test video from spec
+            ("https://youtu.be/-wtIMTCHWuI", True, "-wtIMTCHWuI"),  # ID with dash
+            ("https://youtube.com/watch?v=0zM3nApSvMg", True, "0zM3nApSvMg"),  # ID starting with number
+            ("https://youtube.com/embed/lalOy8Mbfdc", True, "lalOy8Mbfdc"),  # Mixed case ID
+        ]
+        
+        for url, expected_is_youtube, expected_id in test_cases:
+            is_yt, video_id = is_youtube_url(url)
+            assert is_yt == expected_is_youtube, f"Failed for URL: {url}"
+            assert video_id == expected_id, f"Failed to extract ID from URL: {url}"

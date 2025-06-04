@@ -12,6 +12,16 @@ from urllib.parse import urlparse
 import re
 
 
+# YouTube URL patterns that capture the 11-character video ID
+YOUTUBE_PATTERNS = [
+    r'(?:https?://)?(?:www\.)?youtube\.com/watch\?v=([a-zA-Z0-9_-]{11})',
+    r'(?:https?://)?(?:www\.)?youtu\.be/([a-zA-Z0-9_-]{11})',
+    r'(?:https?://)?(?:www\.)?youtube\.com/embed/([a-zA-Z0-9_-]{11})',
+    r'(?:https?://)?(?:www\.)?m\.youtube\.com/watch\?v=([a-zA-Z0-9_-]{11})',
+    r'(?:https?://)?(?:www\.)?youtube\.com/v/([a-zA-Z0-9_-]{11})'
+]
+
+
 def detect_input_type(input_string: str) -> Literal["url", "file"]:
     """
     Determine if an input string is a URL or a local file path.
@@ -162,3 +172,39 @@ def is_supported_file_type(file_path: Union[str, Path]) -> bool:
         False
     """
     return detect_file_type(file_path) is not None
+
+
+def is_youtube_url(url: str) -> Tuple[bool, Optional[str]]:
+    """
+    Check if URL is a YouTube video and extract video ID.
+    
+    Supports various YouTube URL formats including:
+    - youtube.com/watch?v=VIDEO_ID
+    - youtu.be/VIDEO_ID
+    - youtube.com/embed/VIDEO_ID
+    - m.youtube.com/watch?v=VIDEO_ID
+    - youtube.com/v/VIDEO_ID
+    
+    Args:
+        url: The URL to check
+    
+    Returns:
+        A tuple containing:
+        - bool: True if it's a YouTube URL, False otherwise
+        - Optional[str]: The video ID if found, None otherwise
+    
+    Example:
+        >>> is_youtube_url("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        (True, 'dQw4w9WgXcQ')
+        
+        >>> is_youtube_url("https://youtu.be/dQw4w9WgXcQ")
+        (True, 'dQw4w9WgXcQ')
+        
+        >>> is_youtube_url("https://example.com")
+        (False, None)
+    """
+    for pattern in YOUTUBE_PATTERNS:
+        match = re.match(pattern, url)
+        if match:
+            return True, match.group(1)
+    return False, None
