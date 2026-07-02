@@ -210,21 +210,12 @@ def handle_direct_conversion(
 
                         spinner_text = f"Condensing knowledge base: {original_kb_path.name}"
                         with display_spinner(text=spinner_text, console=console):
-                            try:
-                                # Call the condensation function
-                                condensed_file_path = condense_knowledge_base(original_kb_path)
-                                # Update spinner text upon completion (handled by context manager on success/fail)
-                            except Exception as condense_e:
-                                # display_spinner handles logging the failure text
-                                console.print(f"[bold red]An unexpected error occurred during condensation:[/bold red] {str(condense_e)}")
-                                # No need to re-raise, spinner handles fail state
+                            condensed_file_path = condense_knowledge_base(original_kb_path)
 
-                        # Check result and print messages
                         if condensed_file_path:
                             console.print("[bold green]✓ Condensation successful.[/bold green]")
                             console.print(f"  Condensed file: [cyan]{condensed_file_path}[/cyan]")
                         else:
-                            # condense_knowledge_base logs specific errors, so just indicate failure here
                             console.print("[bold red]✗ Condensation failed.[/bold red] Check logs for details.")
 
                 except Exception as e:
